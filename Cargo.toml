@@ -1,42 +1,51 @@
 [package]
-name = "cursor-rust-tools"
-version = "0.1.0"
 edition = "2024"
+name    = "cursor-rust-tools"
+version = "0.1.0"
 
 [[bin]]
 name = "cursor-rust-tools"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.97"
-async-lsp = "0.2.2"
-async-process = "2.3.0"
-flume = "0.11.1"
-futures = "0.3.31"
-lsp-types = "0.95.1"
-mcp-core = { git = "https://github.com/terhechte/mcp-core", branch = "allow-tool-context", features = ["sse"]}
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-tokio = { version = "1.44", features = ["full"] }
-tower = "0.5.2"
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-url = "2.5.4"
-schemars = "0.8.22"
-fuzzt = "0.3.1"
-regex = "1.11.1"
-glob = "0.3.2"
-toml = "0.8.20"
-sha2 = "0.10.8"
-ignore = "0.4.23"
-html2md = "0.2.15"
-egui = "0.31"
-eframe = "0.31"
-lazy_static = "1.5.0"
-egui-aesthetix = { git = "https://github.com/thebashpotato/egui-aesthetix", features = ["all_themes"]}
-rfd = "0.15.3"
-open = "5"
-shellexpand = "3.1.0"
-chrono = "0.4.40"
-notify = "8.0.0"
+anyhow                = "1.0.97"
+async-lsp             = "0.2.2"
+async-process         = "2.3.1"
+chrono                = "0.4.41"
+eframe                = "0.31"
+egui                  = "0.31.1"
+egui-aesthetix        = { git = "https://github.com/thebashpotato/egui-aesthetix", features = ["all_themes"] }
+flume                 = "0.11.1"
+futures               = "0.3.31"
+fuzzt                 = "0.3.1"
+glob                  = "0.3.2"
+html2md               = { version = "0.2.15", path = "/aot/stuff/dev/html2md/" }
+ignore                = "0.4.23"
+lazy_static           = "1.5.0"
+lsp-types             = "0.95.1"
+mcp-core              = { git = "https://github.com/terhechte/mcp-core", branch = "allow-tool-context", features = ["sse"] }
+notify                = "8.0.0"
 notify-debouncer-mini = "0.6.0"
+open                  = "5"
+regex                 = "1.11.1"
+rfd                   = "0.15.3"
+schemars              = "0.8.22"
+serde                 = { version = "1.0.219", features = ["derive"] }
+serde_json            = "1.0.140"
+sha2                  = "0.10.8"
+shellexpand           = "3.1.0"
+tokio                 = { version = "1.44", features = ["full"] }
+toml                  = "0.8.20"
+tower                 = "0.5.2"
+tracing               = "0.1.41"
+tracing-subscriber    = { version = "0.3.19", features = ["env-filter"] }
+url                   = "2.5.4"
+
+[lints.clippy]
+all                  = "warn"
+cargo                = "warn"
+inline_always        = { level = "allow", priority = 1 }
+missing_const_for_fn = { level = "allow", priority = 1 }
+nursery              = "warn"
+pedantic             = "warn"
+too_many_lines       = { level = "allow", priority = 1 }

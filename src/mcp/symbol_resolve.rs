@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    context::{Context, ProjectContext},
+    context::{MainContext, ProjectContext},
     lsp::format_marked_string,
 };
 use anyhow::Result;
@@ -23,7 +23,7 @@ pub struct SymbolResolve;
 impl SymbolResolve {
     pub fn tool() -> Tool {
         Tool {
-            name: "symbol_docs".to_string(),
+            name: "resolve_symbol_docs".to_string(),
             description: Some("Resolve a symbol based on its name. Provide any symbol from the file and it will try to resolve it and return documentation about it.".to_string()),
             input_schema: json!({
                 "type": "object",
@@ -42,7 +42,7 @@ impl SymbolResolve {
         }
     }
 
-    pub fn call(context: Context) -> ToolHandlerFn {
+    pub fn call(context: MainContext) -> ToolHandlerFn {
         Box::new(move |request: CallToolRequest| {
             let clone = context.clone();
             Box::pin(async move {

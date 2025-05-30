@@ -51,15 +51,28 @@ impl RustAnalyzerLsp {
                 .service(ClientState::new_router(
                     indexed_tx,
                     notifier,
-                    project.root().to_path_buf(),
+                    project.root(),
+                    // project.root().to_path_buf(),
                 ))
         });
 
-        let process = async_process::Command::new("rust-analyzer")
-            .current_dir(project.root())
+        let mut cmd = async_process::Command::new("rust-analyzer");
+        cmd.current_dir(project.root());
+
+        if let Some(extra_env) = project
+            .rust_analyzer()
+            .and_then(|ra| ra.cargo.as_ref())
+            .and_then(|c| c.extra_env.as_ref())
+        {
+            cmd.envs(extra_env);
+            tracing::info!("Added extra_env to rust-analyzer command");
+        }
+
+        let process = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
+            // .kill_on_drop(true)
             .spawn()
             .context("Failed run rust-analyzer")?;
 
@@ -87,12 +100,36 @@ impl RustAnalyzerLsp {
             change_notifier,
         };
 
+        let initialization_options: Option<serde_json::Value> = project
+            .rust_analyzer()
+            .and_then(|ra| serde_json::to_value(ra).ok())
+            .map(|ra_config| {
+                json!({
+                    "rust-analyzer": ra_config
+                })
+            });
+        let initialization_options2: Option<serde_json::Value> = project
+            .rust_analyzer()
+            .and_then(|ra| serde_json::to_value(ra).ok());
+        // let initialization_options: Option<serde_json::Value> = project
+        //     .rust_analyzer()
+        //     .and_then(|ra| serde_json::to_value(ra).ok());
+
+        let kk = project
+            .rust_analyzer
+            .as_ref()
+            .and_then(|config_ref| serde_json::to_value(config_ref).ok());
+        tracing::info!("initialization_options: {initialization_options:?}");
+        tracing::info!("initialization_options2: {initialization_options2:?}");
+        tracing::info!("kk: {kk:?}");
+
         // Initialize.
         let init_ret = client
             .server
             .lock()
             .await
             .initialize(InitializeParams {
+                initialization_options,
                 workspace_folders: Some(vec![WorkspaceFolder {
                     uri: project.uri()?,
                     name: "root".into(),
@@ -122,10 +159,12 @@ impl RustAnalyzerLsp {
                 ..InitializeParams::default()
             })
             .await
+            // .unwrap();
             .context("LSP initialize failed")?;
-        tracing::trace!("Initialized: {init_ret:?}");
+        tracing::debug!("Initialized: {init_ret:?}");
         info!("LSP Initialized");
 
+        // server.initialized(InitializedParams {}).unwrap();
         client
             .server
             .lock()
@@ -135,7 +174,11 @@ impl RustAnalyzerLsp {
 
         info!("Waiting for rust-analyzer indexing...");
         let rx = client.indexed_rx.lock().await.clone();
+        // rx.recv()?;
         tokio::spawn(async move {
+            // while rx.recv_async().await == Ok(()) {
+            // info!("rust-analyzer indexing finished.");
+            // }
             while let Ok(()) = rx.recv_async().await {
                 info!("rust-analyzer indexing finished.");
             }

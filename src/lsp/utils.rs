@@ -1,8 +1,11 @@
 use lsp_types::{GotoDefinitionResponse, MarkedString};
+use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 use url::Url;
+
+use crate::project::Project;
 
 pub fn get_location_contents(
     response: GotoDefinitionResponse,
@@ -47,10 +50,20 @@ pub fn format_marked_string(marked_string: &MarkedString) -> String {
 
 // Helper function to convert a URL to a file path
 fn url_to_file_path(url: &Url) -> Result<PathBuf, std::io::Error> {
-    url.to_file_path().map_err(|_| {
+    url.to_file_path().map_err(|()| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             format!("Invalid file URL: {}", url),
         )
+    })
+}
+
+#[inline]
+pub fn get_ra_value_wrapped(project: &Project) -> Option<Value> {
+    project.rust_analyzer().and_then(|config_ref| {
+        let inner_value = serde_json::to_value(config_ref).ok()?;
+        Some(json!({
+            "rust-analyzer": inner_value
+        }))
     })
 }

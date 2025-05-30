@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::context::{Context, ProjectContext};
+use crate::context::{MainContext, ProjectContext};
 use anyhow::Result;
 use lsp_types::Position;
 use mcp_core::types::{CallToolRequest, CallToolResponse, ToolResponseContent};
@@ -62,7 +62,7 @@ impl RequestExtension for CallToolRequest {
 
 /// Returns the project, the relative file path and the absolute file path
 pub async fn get_info_from_request(
-    context: &Context,
+    context: &MainContext,
     request: &CallToolRequest,
 ) -> Result<(Arc<ProjectContext>, String, PathBuf), CallToolResponse> {
     let file = request.get_file()?;

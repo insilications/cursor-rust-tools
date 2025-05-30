@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json as json;
@@ -36,11 +38,31 @@ pub struct CompilerMessageSpan {
 #[derive(Clone, Debug)]
 pub struct CargoRemote {
     repository: Project,
+    command: Option<String>,
+    target: Option<String>,
+    extra_env: Option<HashMap<String, String>>,
 }
 
 impl CargoRemote {
     pub fn new(repository: Project) -> Self {
-        Self { repository }
+        #[allow(clippy::option_if_let_else)]
+        let (command, target, extra_env) = match repository.rust_analyzer() {
+            Some(ra) => {
+                let command = ra.check.as_ref().and_then(|c| c.command.clone());
+                match &ra.cargo {
+                    Some(cargo) => (command, cargo.target.clone(), cargo.extra_env.clone()),
+                    None => (command, None, None),
+                }
+            }
+            None => (None, None, None),
+        };
+
+        Self {
+            repository,
+            command,
+            target,
+            extra_env,
+        }
     }
 
     async fn run_cargo_command(
@@ -48,25 +70,29 @@ impl CargoRemote {
         args: &[&str],
         backtrace: bool,
     ) -> Result<(Vec<CargoMessage>, Vec<String>)> {
-        let output = Command::new("cargo")
-            .current_dir(self.repository.root())
-            .args(args)
-            .env("RUST_BACKTRACE", if backtrace { "full" } else { "0" })
-            .output()
-            .await?;
+        // Build the command first
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(self.repository.root()).args(args);
 
-        let stdout = String::from_utf8(output.stdout)?;
+        if let Some(extra_env) = self.extra_env.as_ref().filter(|m| !m.is_empty()) {
+            cmd.envs(extra_env);
+        }
+        cmd.env("RUST_BACKTRACE", if backtrace { "full" } else { "0" });
+
+        let output = cmd.output().await?;
+        // Re-use the buffer returned by `Command` to avoid an extra allocation
+        let stdout_str = std::str::from_utf8(&output.stdout)?;
 
         let mut messages = Vec::new();
         let mut test_messages = Vec::new();
-        for line in stdout.lines().filter(|line| !line.is_empty()) {
+        for line in stdout_str.lines().filter(|line| !line.is_empty()) {
             match json::from_str::<CargoMessage>(line) {
-                Ok(message) => {
-                    messages.push(message);
+                Ok(msg) => {
+                    messages.push(msg);
                 }
                 Err(_) => {
                     // Cargo test doesn't respect `message-format=json`
-                    test_messages.push(line.to_string());
+                    test_messages.push(line.to_owned());
                 }
             }
         }
@@ -75,17 +101,33 @@ impl CargoRemote {
     }
 
     pub async fn check(&self, only_errors: bool) -> Result<Vec<String>> {
-        let (messages, _) = self
-            .run_cargo_command(&["check", "--message-format=json"], false)
-            .await?;
+        let cmd = self.command.as_deref().unwrap_or("check");
+        tracing::info!("cmd: {cmd}");
+
+        let (messages, _) = match self.target.as_deref() {
+            Some(target) => {
+                tracing::info!("target: {target}");
+                self.run_cargo_command(
+                    &[cmd, "--quiet", "--message-format=json", "--target", target],
+                    false,
+                )
+                .await?
+            }
+            None => {
+                self.run_cargo_command(&[cmd, "--quiet", "--message-format=json"], false)
+                    .await?
+            }
+        };
+
         Ok(messages
             .into_iter()
             .filter_map(|message| match message {
                 CargoMessage::CompilerMessage { message } => {
                     if only_errors && message.level != "error" {
-                        return None;
+                        None
+                    } else {
+                        Some(message.rendered)
                     }
-                    Some(message.rendered)
                 }
                 _ => None,
             })
@@ -94,6 +136,9 @@ impl CargoRemote {
 
     pub async fn test(&self, test_name: Option<String>, backtrace: bool) -> Result<Vec<String>> {
         let mut args = vec!["test", "--message-format=json"];
+        if let Some(t) = self.target.as_deref() {
+            args.push(t);
+        }
         if let Some(ref test_name) = test_name {
             args.push("--");
             args.push("--nocapture");

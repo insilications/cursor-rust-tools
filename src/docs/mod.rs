@@ -36,9 +36,10 @@ impl Docs {
         })
     }
 
+    #[allow(clippy::unused_async)]
     pub async fn update_index(&self) -> Result<()> {
         self.notifier.send(DocsNotification::Indexing {
-            project: self.project.root().to_path_buf(),
+            project: self.project.root().clone(),
             is_indexing: true,
         })?;
         let cloned_project = self.project.clone();

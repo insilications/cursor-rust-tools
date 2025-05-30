@@ -8,7 +8,7 @@ use egui::{CentralPanel, Color32, Context as EguiContext, RichText, ScrollArea, 
 use flume::Receiver;
 
 use crate::{
-    context::{Context, ContextNotification},
+    context::{ContextNotification, MainContext},
     project::Project,
 };
 
@@ -36,7 +36,7 @@ impl PartialEq for TimestampedEvent {
 }
 
 pub struct App {
-    context: Context,
+    context: MainContext,
     receiver: Receiver<ContextNotification>,
     selected_project: Option<PathBuf>,
     logs: Vec<String>,
@@ -48,7 +48,7 @@ pub struct App {
 
 impl App {
     pub fn new(
-        context: Context,
+        context: MainContext,
         receiver: Receiver<ContextNotification>,
         project_descriptions: Vec<ProjectDescription>,
     ) -> Self {
@@ -146,9 +146,10 @@ impl App {
                     let context = self.context.clone();
                     tokio::spawn(async move {
                         if let Err(e) = context
-                            .add_project(Project {
+                            .add_project(&mut Project {
                                 root: path_buf,
                                 ignore_crates: vec![],
+                                rust_analyzer: None,
                             })
                             .await
                         {

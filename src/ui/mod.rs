@@ -9,13 +9,13 @@ use app::App;
 use flume::Receiver;
 use theme::apply_theme;
 
-use crate::context::Context;
 use crate::context::ContextNotification;
+use crate::context::MainContext;
 
 pub use app::ProjectDescription;
 
 pub fn run_ui(
-    context: Context,
+    context: MainContext,
     receiver: Receiver<ContextNotification>,
     project_descriptions: Vec<ProjectDescription>,
 ) -> Result<()> {

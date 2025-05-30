@@ -1,0 +1,24 @@
+{
+	"files": [
+		{
+			"path": "src/lsp/rust_analyzer_lsp.rs",
+			"bookmarks": [
+				{
+					"line": 111,
+					"column": 8,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/docs/generate.rs",
+			"bookmarks": [
+				{
+					"line": 4,
+					"column": 10,
+					"label": ""
+				}
+			]
+		}
+	]
+}

@@ -9,7 +9,7 @@ mod utils;
 
 use std::path::PathBuf;
 
-use crate::context::Context;
+use crate::context::MainContext;
 use crate::project::TransportType;
 use anyhow::Result;
 use mcp_core::{
@@ -31,7 +31,7 @@ pub(super) enum McpNotification {
     },
 }
 
-pub async fn run_server(context: Context) -> Result<()> {
+pub async fn run_server(context: MainContext) -> Result<()> {
     let server_protocol = Server::builder("cursor_rust_tools".to_string(), "1.0".to_string())
         .capabilities(ServerCapabilities {
             tools: Some(json!({

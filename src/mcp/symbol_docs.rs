@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    context::{Context, ProjectContext},
+    context::{MainContext, ProjectContext},
     lsp::format_marked_string,
 };
 use anyhow::Result;
@@ -25,7 +25,8 @@ impl SymbolDocs {
     pub fn tool() -> Tool {
         Tool {
             name: "symbol_docs".to_string(),
-            description: Some("Get the documentation for a symbol".to_string()),
+            // Get the hover information (type, description) for a specific symbol in a file
+            description: Some("Get the documentation for a symbol in the project".to_string()),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -47,7 +48,7 @@ impl SymbolDocs {
         }
     }
 
-    pub fn call(context: Context) -> ToolHandlerFn {
+    pub fn call(context: MainContext) -> ToolHandlerFn {
         Box::new(move |request: CallToolRequest| {
             let clone = context.clone();
             Box::pin(async move {

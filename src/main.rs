@@ -9,7 +9,7 @@ mod ui;
 use std::env::args;
 
 use anyhow::Result;
-use context::Context as ContextType;
+use context::MainContext as MainContextType;
 use mcp::run_server;
 use tokio::signal;
 use tracing::{error, info};
@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(
             (EnvFilter::builder().try_from_env())
-                .unwrap_or(EnvFilter::new("cursor_rust_tools=info")),
+                .unwrap_or_else(|_| EnvFilter::new("cursor_rust_tools=info")),
         )
         .with(log_layer)
         .init();
@@ -36,13 +36,14 @@ async fn main() -> Result<()> {
     let no_ui = args().any(|arg| arg == "--no-ui");
 
     let (sender, receiver) = flume::unbounded();
-    let context = ContextType::new(4000, sender).await;
-    context.load_config().await?;
+    let main_context = MainContextType::new(4000, sender).await;
+    // let main_context = MainContextType::new(4000, sender);
+    main_context.load_config().await?;
 
-    let final_context = context.clone();
+    let final_context = main_context.clone();
 
     // Run the MCP Server
-    let cloned_context = context.clone();
+    let cloned_context = main_context.clone();
     let server_handle = tokio::spawn(async move {
         run_server(cloned_context).await.unwrap();
     });
@@ -51,11 +52,11 @@ async fn main() -> Result<()> {
         if no_ui {
             info!(
                 "Running in CLI mode on port {}:{}",
-                context.address_information().0,
-                context.address_information().1
+                main_context.address_information().0,
+                main_context.address_information().1
             );
-            info!("Configuration file: {}", context.configuration_file());
-            if context.project_descriptions().await.is_empty() {
+            info!("Configuration file: {}", main_context.configuration_file());
+            if main_context.project_descriptions().await.is_empty() {
                 error!(
                     "No projects found, please run without `--no-ui` or edit configuration file"
                 );
@@ -63,7 +64,7 @@ async fn main() -> Result<()> {
             }
             info!(
                 "Cursor mcp json (project/.cursor.mcp.json):\n```json\n{}\n```",
-                context.mcp_configuration()
+                main_context.mcp_configuration()
             );
             // Keep the CLI mode running indefinitely until Ctrl+C
             loop {
@@ -75,9 +76,9 @@ async fn main() -> Result<()> {
             }
             // Note: This loop will now only exit via Ctrl+C handled by tokio::select!
         } else {
-            let project_descriptions = context.project_descriptions().await;
+            let project_descriptions = main_context.project_descriptions().await;
             // run_ui blocks, so we need to handle its potential error
-            run_ui(context, receiver, project_descriptions)
+            run_ui(main_context, receiver, project_descriptions)
         }
     };
 

@@ -355,7 +355,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cc",
  "cesu8",
- "jni 0.21.1",
+ "jni",
  "jni-sys",
  "libc",
  "log",
@@ -570,9 +570,9 @@ dependencies = [
 
 [[package]]
 name = "async-process"
-version = "2.3.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63255f1dc2381611000436537bbedfe83183faa303a5a0edaf191edef06526bb"
+checksum = "cde3f4e40e6021d7acffc90095cbd6dc54cb593903d1de5832f435eb274b85dc"
 dependencies = [
  "async-channel",
  "async-io",
@@ -583,7 +583,7 @@ dependencies = [
  "cfg-if",
  "event-listener",
  "futures-lite",
- "rustix 0.38.44",
+ "rustix 1.0.5",
  "tracing",
 ]
 
@@ -937,9 +937,9 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.40"
+version = "0.4.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a7964611d71df112cb1730f2ee67324fcf4d0fc6606acbbe9bfe06df124637c"
+checksum = "c469d952047f47f91b68d1cba3f10d63c11d73e4636f24f08daf0278abf01c4d"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
@@ -2048,11 +2048,9 @@ dependencies = [
 [[package]]
 name = "html2md"
 version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cff9891f2e0d9048927fbdfc28b11bf378f6a93c7ba70b23d0fbee9af6071b4"
 dependencies = [
  "html5ever",
- "jni 0.19.0",
+ "jni",
  "lazy_static",
  "markup5ever_rcdom",
  "percent-encoding",
@@ -2470,20 +2468,6 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
-
-[[package]]
-name = "jni"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6df18c2e3db7e453d3c6ac5b3e9d5182664d28788126d39b91f2d1e22b017ec"
-dependencies = [
- "cesu8",
- "combine",
- "jni-sys",
- "log",
- "thiserror 1.0.69",
- "walkdir",
-]
 
 [[package]]
 name = "jni"
@@ -5204,7 +5188,7 @@ checksum = "d5df295f8451142f1856b1bd86a606dfe9587d439bc036e319c827700dbd555e"
 dependencies = [
  "core-foundation 0.10.0",
  "home",
- "jni 0.21.1",
+ "jni",
  "log",
  "ndk-context",
  "objc2 0.6.0",

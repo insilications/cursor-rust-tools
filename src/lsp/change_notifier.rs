@@ -53,7 +53,7 @@ fn handle_event(
     if event.path.starts_with(&target_path) {
         return;
     }
-    tracing::trace!("Event {:?} for {:?}", event.kind, event.path);
+    tracing::debug!("Event {:?} for {:?}", event.kind, event.path);
     let url = match Url::from_file_path(event.path.clone()) {
         Ok(url) => url,
         Err(e) => {

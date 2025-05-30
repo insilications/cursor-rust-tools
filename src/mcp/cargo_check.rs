@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::context::{Context, ProjectContext};
+use crate::context::{MainContext, ProjectContext};
 use anyhow::Result;
 use mcp_core::{
     tools::ToolHandlerFn,
@@ -40,7 +40,7 @@ impl CargoCheck {
         }
     }
 
-    pub fn call(context: Context) -> ToolHandlerFn {
+    pub fn call(context: MainContext) -> ToolHandlerFn {
         Box::new(move |request: CallToolRequest| {
             let clone = context.clone();
             Box::pin(async move {
@@ -86,7 +86,7 @@ async fn handle_request(
         .arguments
         .as_ref()
         .and_then(|args| args.get("only_errors"))
-        .and_then(|v| v.as_bool())
+        .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
 
     let messages = project

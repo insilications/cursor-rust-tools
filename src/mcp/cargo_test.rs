@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::context::{Context, ProjectContext};
+use crate::context::{MainContext, ProjectContext};
 use anyhow::Result;
 use mcp_core::{
     tools::ToolHandlerFn,
@@ -44,7 +44,7 @@ impl CargoTest {
         }
     }
 
-    pub fn call(context: Context) -> ToolHandlerFn {
+    pub fn call(context: MainContext) -> ToolHandlerFn {
         Box::new(move |request: CallToolRequest| {
             let clone = context.clone();
             Box::pin(async move {

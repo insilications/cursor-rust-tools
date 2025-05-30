@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    context::{Context, ProjectContext},
+    context::{MainContext, ProjectContext},
     lsp::get_location_contents,
 };
 use anyhow::Result;
@@ -46,7 +46,7 @@ impl SymbolImpl {
         }
     }
 
-    pub fn call(context: Context) -> ToolHandlerFn {
+    pub fn call(context: MainContext) -> ToolHandlerFn {
         Box::new(move |request: CallToolRequest| {
             let clone = context.clone();
             Box::pin(async move {

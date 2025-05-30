@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -14,7 +15,7 @@ use crate::{
     lsp::RustAnalyzerLsp,
     project::{Project, TransportType},
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use flume::Sender;
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +31,7 @@ pub enum ContextNotification {
 
 impl ContextNotification {
     pub fn notification_path(&self) -> PathBuf {
+        #[allow(clippy::use_self, clippy::match_same_arms)]
         match self {
             ContextNotification::Lsp(LspNotification::Indexing { project, .. }) => project.clone(),
             ContextNotification::Docs(DocsNotification::Indexing { project, .. }) => {
@@ -44,6 +46,7 @@ impl ContextNotification {
     }
 
     pub fn description(&self) -> String {
+        #[allow(clippy::use_self)]
         match self {
             ContextNotification::Lsp(LspNotification::Indexing { is_indexing, .. }) => {
                 format!(
@@ -88,7 +91,7 @@ pub struct ProjectContext {
 }
 
 #[derive(Clone)]
-pub struct Context {
+pub struct MainContext {
     projects: Arc<RwLock<HashMap<PathBuf, Arc<ProjectContext>>>>,
     transport: TransportType,
     lsp_sender: Sender<LspNotification>,
@@ -97,7 +100,8 @@ pub struct Context {
     notifier: Sender<ContextNotification>,
 }
 
-impl Context {
+impl MainContext {
+    #[allow(clippy::unused_async)]
     pub async fn new(port: u16, notifier: Sender<ContextNotification>) -> Self {
         let (lsp_sender, lsp_receiver) = flume::unbounded();
         let (docs_sender, docs_receiver) = flume::unbounded();
@@ -195,6 +199,7 @@ impl Context {
             .map(|p| SerProject {
                 root: p.root().to_string_lossy().to_string(),
                 ignore_crates: p.ignore_crates().to_vec(),
+                rust_analyzer: p.rust_analyzer().cloned(),
             })
             .collect();
         let config = SerConfig {
@@ -230,6 +235,7 @@ impl Context {
                 return Err(e.into()); // Propagate read error
             }
         };
+        // tracing::info!("toml_string: {toml_string}");
 
         if toml_string.trim().is_empty() {
             tracing::warn!(
@@ -239,7 +245,7 @@ impl Context {
             return Ok(());
         }
 
-        let loaded_config: SerConfig = match toml::from_str(&toml_string) {
+        let mut loaded_config: SerConfig = match toml::from_str(&toml_string) {
             Ok(config) => config,
             Err(e) => {
                 tracing::error!(
@@ -252,37 +258,36 @@ impl Context {
             }
         };
 
-        for project in loaded_config.projects {
-            let project = Project {
-                root: PathBuf::from(&project.root),
-                ignore_crates: project.ignore_crates,
+        // tracing::info!("loaded_config: {:?}", loaded_config);
+
+        for p in &mut loaded_config.projects {
+            // We need to canonicalize again as the stored path might be relative or different
+            let root: PathBuf = PathBuf::from(&p.root)
+                .canonicalize()
+                .with_context(|| format!("Failed to add project {:?} from config", p.root))?;
+            let mut new_project = Project {
+                root,
+                ignore_crates: mem::take(&mut p.ignore_crates),
+                rust_analyzer: p.rust_analyzer.take(),
             };
+
             // Validate project root before adding
-            if !project.root().exists() || !project.root().is_dir() {
+            if !new_project.root().exists() || !new_project.root().is_dir() {
                 tracing::warn!(
                     "Project root {:?} from config does not exist or is not a directory, skipping.",
-                    project.root()
+                    new_project.root()
                 );
                 continue;
             }
-            // We need to canonicalize again as the stored path might be relative or different
-            match Project::new(project.root()) {
-                Ok(new_project) => {
-                    if let Err(e) = self.add_project(new_project).await {
-                        tracing::error!(
-                            "Failed to add project {:?} from config: {}",
-                            project.root(),
-                            e
-                        );
-                    }
-                }
-                Err(e) => {
-                    tracing::error!(
-                        "Failed to create project for root {:?} from config: {}",
-                        project.root(),
-                        e
-                    );
-                }
+
+            // tracing::info!("project: {:?}", new_project);
+
+            if let Err(e) = self.add_project(&mut new_project).await {
+                tracing::error!(
+                    "Failed to add project {:?} from config: {}",
+                    new_project.root(),
+                    e
+                );
             }
         }
 
@@ -290,14 +295,14 @@ impl Context {
     }
 
     /// Add a new project to the context
-    pub async fn add_project(&self, project: Project) -> Result<()> {
+    pub async fn add_project(&self, project: &mut Project) -> Result<()> {
         let root = project.root().clone();
-        let lsp = RustAnalyzerLsp::new(&project, self.lsp_sender.clone()).await?;
+        let lsp = RustAnalyzerLsp::new(project, self.lsp_sender.clone()).await?;
         let docs = Docs::new(project.clone(), self.docs_sender.clone())?;
         docs.update_index().await?;
         let cargo_remote = CargoRemote::new(project.clone());
         let project_context = Arc::new(ProjectContext {
-            project,
+            project: mem::take(project),
             lsp,
             docs,
             cargo_remote,
@@ -435,6 +440,33 @@ struct SerConfig {
 struct SerProject {
     root: String,
     ignore_crates: Vec<String>,
+    #[serde(rename = "rust-analyzer")]
+    rust_analyzer: Option<RustAnalyzerConfig>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RustAnalyzerConfig {
+    pub check: Option<CheckConfig>,
+    pub cargo: Option<CargoConfig>,
+    #[serde(rename = "procMacro")]
+    pub proc_macro: Option<ProcMacroConfig>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CheckConfig {
+    pub command: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CargoConfig {
+    pub target: Option<String>,
+    #[serde(rename = "extraEnv")]
+    pub extra_env: Option<HashMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProcMacroConfig {
+    pub ignored: Option<HashMap<String, Vec<String>>>,
 }
 
 async fn project_descriptions(

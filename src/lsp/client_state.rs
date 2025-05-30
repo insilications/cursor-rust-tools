@@ -12,10 +12,20 @@ use lsp_types::{
 
 // Old and new token names.
 const RA_INDEXING_TOKENS: &[&str] = &[
-    "rustAnalyzer/Indexing",
+    "rustAnalyzer/Building CrateGraph",
+    "rustAnalyzer/Building build-artifacts",
+    "rustAnalyzer/Fetching",
+    "rustAnalyzer/Loading proc-macros",
+    "rustAnalyzer/Roots Scanned",
     "rustAnalyzer/cachePriming",
-    "rustAnalyzer/Building",
+    "rustAnalyzer/Indexing",
+    "rust-analyzer/flycheck/0",
 ];
+// const RA_INDEXING_TOKENS: &[&str] = &[
+//     "rustAnalyzer/Indexing",
+//     "rustAnalyzer/cachePriming",
+//     "rustAnalyzer/Building",
+// ];
 
 pub struct ClientState {
     project: PathBuf,
@@ -28,13 +38,14 @@ impl LanguageClient for ClientState {
     type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
     fn progress(&mut self, params: ProgressParams) -> Self::NotifyResult {
-        tracing::trace!("{:?} {:?}", params.token, params.value);
+        tracing::info!("{:?} {:?}", params.token, params.value);
         let is_indexing =
             matches!(params.token, NumberOrString::String(s) if RA_INDEXING_TOKENS.contains(&&*s));
         let is_work_done = matches!(
             params.value,
             ProgressParamsValue::WorkDone(WorkDoneProgress::End(_))
         );
+        tracing::info!("is_indexing: {is_indexing} - is_work_done: {is_work_done}");
         if is_indexing && !is_work_done {
             if let Err(e) = self.notifier.send(LspNotification::Indexing {
                 project: self.project.clone(),
@@ -60,6 +71,48 @@ impl LanguageClient for ClientState {
         ControlFlow::Continue(())
     }
 
+    // fn progress(&mut self, params: ProgressParams) -> Self::NotifyResult {
+    //     tracing::info!("{:?} {:?}", params.token, params.value);
+    //     let is_indexing =
+    //         matches!(params.token, NumberOrString::String(s) if RA_INDEXING_TOKENS.contains(&&*s));
+    //     let is_work_done = matches!(
+    //         params.value,
+    //         ProgressParamsValue::WorkDone(WorkDoneProgress::End(_))
+    //     );
+    //     #[allow(clippy::collapsible_if)]
+    //     if is_indexing && !is_work_done {
+    //         if let Err(e) = self.notifier.send(LspNotification::Indexing {
+    //             project: self.project.clone(),
+    //             is_indexing: true,
+    //         }) {
+    //             tracing::error!("Failed to send indexing notification: {}", e);
+    //         }
+    //     }
+    //     if is_indexing && is_work_done {
+    //         if let Err(e) = self.notifier.send(LspNotification::Indexing {
+    //             project: self.project.clone(),
+    //             is_indexing: false,
+    //         }) {
+    //             tracing::error!("Failed to send indexing notification: {}", e);
+    //         }
+    //         // {
+    //         //     // Sometimes rust-analyzer auto-index multiple times?
+    //         //     if let Some(tx) = self.indexed_tx.take() {
+    //         //         let _: Result<_, _> = tx.send(());
+    //         //     }
+    //         // }
+    //         {
+    //             #[allow(clippy::collapsible_if)]
+    //             if let Some(tx) = &self.indexed_tx {
+    //                 if let Err(e) = tx.try_send(()) {
+    //                     tracing::error!("Failed to send indexing completion signal: {}", e);
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     ControlFlow::Continue(())
+    // }
+
     fn publish_diagnostics(&mut self, _: PublishDiagnosticsParams) -> Self::NotifyResult {
         ControlFlow::Continue(())
     }
@@ -74,12 +127,12 @@ impl ClientState {
     pub fn new_router(
         indexed_tx: flume::Sender<()>,
         notifier: flume::Sender<LspNotification>,
-        project: PathBuf,
+        project: &PathBuf,
     ) -> Router<Self> {
         let mut router = Router::from_language_client(ClientState {
             indexed_tx: Some(indexed_tx),
             notifier,
-            project,
+            project: project.clone(),
         });
         router.event(Self::on_stop);
         router
