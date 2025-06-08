@@ -29,19 +29,6 @@ pub fn generate_docs(project: &Project) -> Result<()> {
             tracing::info!("Added extra_env to cargo doc command");
         }
     }
-    // if let Some(ra) = project.rust_analyzer() {
-    //     if let Some(cargo_cfg) = ra.cargo.as_ref() {
-    //         if let Some(target) = cargo_cfg.target.as_ref() {
-    //             tracing::info!("CargoRemote::check - target: {target}");
-    //             cmd.args(["--target", target]);
-    //         }
-
-    //         if let Some(extra_env) = cargo_cfg.extra_env.as_ref() {
-    //             cmd.envs(extra_env);
-    //             tracing::info!("Added extra_env to cargo doc command");
-    //         }
-    //     }
-    // }
 
     cmd.current_dir(project.root())
         .stdin(Stdio::null())
