@@ -8,8 +8,8 @@ name = "cursor-rust-tools"
 path = "src/main.rs"
 
 [dependencies]
-anyhow                = "1.0.97"
-async-lsp             = "0.2.2"
+anyhow                = "1.0.98"
+async-lsp             = { version = "0.2.2", features = ["client-monitor", "omni-trait", "stdio", "tokio", "tracing"] }
 async-process         = "2.3.1"
 chrono                = "0.4.41"
 eframe                = "0.31"
@@ -22,20 +22,21 @@ glob                  = "0.3.2"
 html2md               = { version = "0.2.15", path = "/aot/stuff/dev/html2md/" }
 ignore                = "0.4.23"
 lazy_static           = "1.5.0"
-lsp-types             = "0.95.1"
+lsp-types             = { version = "0.97.0", features = ["proposed"] }
 mcp-core              = { git = "https://github.com/terhechte/mcp-core", branch = "allow-tool-context", features = ["sse"] }
 notify                = "8.0.0"
 notify-debouncer-mini = "0.6.0"
 open                  = "5"
 regex                 = "1.11.1"
 rfd                   = "0.15.3"
-schemars              = "0.8.22"
+rustix                = "1.0.7"
+schemars              = "0.9.0"
 serde                 = { version = "1.0.219", features = ["derive"] }
 serde_json            = "1.0.140"
-sha2                  = "0.10.8"
-shellexpand           = "3.1.0"
-tokio                 = { version = "1.44", features = ["full"] }
-toml                  = "0.8.20"
+sha2                  = "0.10.9"
+shellexpand           = "3.1.1"
+tokio                 = { version = "1.45.1", features = ["full"] }
+toml                  = "0.8.23"
 tower                 = "0.5.2"
 tracing               = "0.1.41"
 tracing-subscriber    = { version = "0.3.19", features = ["env-filter"] }
