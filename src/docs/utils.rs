@@ -3,7 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use toml::Value;
 
-#[derive(Debug, PartialEq)]
+// #[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RustSymbol<'a> {
     Function(&'a str),
     Macro(&'a str),
@@ -27,7 +28,7 @@ impl RustSymbol<'_> {
     }
 }
 
-pub fn parse_rust_symbol(filename: &str) -> Option<RustSymbol> {
+pub fn parse_rust_symbol(filename: &'_ str) -> Option<RustSymbol<'_>> {
     // Split on the first dot to separate the kind from the name
     let parts: Vec<&str> = filename.splitn(2, '.').collect();
     if parts.len() != 2 {

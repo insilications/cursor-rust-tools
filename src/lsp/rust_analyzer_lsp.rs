@@ -53,7 +53,6 @@ impl RustAnalyzerLsp {
                     indexed_tx,
                     notifier,
                     project.root(),
-                    // project.root().to_path_buf(),
                 ))
         });
 

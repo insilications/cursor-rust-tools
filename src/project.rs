@@ -47,7 +47,7 @@ impl Project {
     #[inline]
     pub fn uri(&self) -> Result<Url> {
         Url::from_file_path(&self.root)
-            .map_err(|()| anyhow::anyhow!("Failed to create project root URI"))
+            .map_err(|_| anyhow::anyhow!("Failed to create project root URI"))
     }
 
     #[inline]
@@ -68,7 +68,7 @@ impl Project {
     #[inline]
     pub fn file_uri(&self, relative_path: impl AsRef<Path>) -> Result<Url> {
         Url::from_file_path(self.root.join(relative_path))
-            .map_err(|_| anyhow::anyhow!("Failed to create file URI"))
+            .map_err(|()| anyhow::anyhow!("Failed to create file URI"))
     }
 
     /// Given an absolute path, return the path relative to the project root.

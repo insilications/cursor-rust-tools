@@ -3,7 +3,7 @@ mod client_state;
 mod rust_analyzer_lsp;
 mod utils;
 
-pub(super) struct Stop;
+pub struct Stop;
 
 use std::path::PathBuf;
 

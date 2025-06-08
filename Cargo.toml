@@ -22,7 +22,7 @@ glob                  = "0.3.2"
 html2md               = { version = "0.2.15", path = "/aot/stuff/dev/html2md/" }
 ignore                = "0.4.23"
 lazy_static           = "1.5.0"
-lsp-types             = { version = "0.97.0", features = ["proposed"] }
+lsp-types             = "0.95.1"
 mcp-core              = { git = "https://github.com/terhechte/mcp-core", branch = "allow-tool-context", features = ["sse"] }
 notify                = "8.0.0"
 notify-debouncer-mini = "0.6.0"
