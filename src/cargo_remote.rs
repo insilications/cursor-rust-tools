@@ -56,6 +56,9 @@ impl CargoRemote {
             }
             None => (None, None, None),
         };
+        tracing::info!(
+            "CargoRemote - command: {command:?}, target: {target:?}, extra_env: {extra_env:?}"
+        );
 
         Self {
             repository,
@@ -76,6 +79,7 @@ impl CargoRemote {
 
         if let Some(extra_env) = self.extra_env.as_ref().filter(|m| !m.is_empty()) {
             cmd.envs(extra_env);
+            tracing::info!("CargoRemote::run_cargo_command - Added extra_env to cargo command");
         }
         cmd.env("RUST_BACKTRACE", if backtrace { "full" } else { "0" });
 
@@ -102,20 +106,30 @@ impl CargoRemote {
 
     pub async fn check(&self, only_errors: bool) -> Result<Vec<String>> {
         let cmd = self.command.as_deref().unwrap_or("check");
-        tracing::info!("cmd: {cmd}");
+        tracing::info!("CargoRemote::check - cmd: {cmd}");
 
         let (messages, _) = match self.target.as_deref() {
             Some(target) => {
-                tracing::info!("target: {target}");
+                tracing::info!("CargoRemote::check - target: {target}");
                 self.run_cargo_command(
-                    &[cmd, "--quiet", "--message-format=json", "--target", target],
+                    &[
+                        cmd,
+                        "--quiet",
+                        "--workspace",
+                        "--message-format=json",
+                        "--target",
+                        target,
+                    ],
                     false,
                 )
                 .await?
             }
             None => {
-                self.run_cargo_command(&[cmd, "--quiet", "--message-format=json"], false)
-                    .await?
+                self.run_cargo_command(
+                    &[cmd, "--quiet", "--workspace", "--message-format=json"],
+                    false,
+                )
+                .await?
             }
         };
 
@@ -135,15 +149,17 @@ impl CargoRemote {
     }
 
     pub async fn test(&self, test_name: Option<String>, backtrace: bool) -> Result<Vec<String>> {
-        let mut args = vec!["test", "--message-format=json"];
+        let mut args = vec!["test", "--quiet", "--workspace", "--message-format=json"];
+
         if let Some(t) = self.target.as_deref() {
-            args.push(t);
+            args.extend_from_slice(&["--target", t]);
         }
         if let Some(ref test_name) = test_name {
             args.push("--");
             args.push("--nocapture");
             args.push(test_name);
         }
+        tracing::info!("CargoRemote::test - args: {args:?}");
         let (_, messages) = self.run_cargo_command(&args, backtrace).await?;
         Ok(messages)
     }

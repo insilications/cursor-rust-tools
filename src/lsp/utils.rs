@@ -59,7 +59,7 @@ fn url_to_file_path(url: &Url) -> Result<PathBuf, std::io::Error> {
 }
 
 #[inline]
-pub fn get_ra_value_wrapped(project: &Project) -> Option<Value> {
+pub fn get_rust_analyzer_options(project: &Project) -> Option<Value> {
     project.rust_analyzer().and_then(|config_ref| {
         let inner_value = serde_json::to_value(config_ref).ok()?;
         Some(json!({

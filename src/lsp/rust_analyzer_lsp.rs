@@ -25,6 +25,7 @@ use tracing::{debug, info};
 use super::change_notifier::ChangeNotifier;
 use super::client_state::ClientState;
 use crate::lsp::LspNotification;
+use crate::lsp::get_rust_analyzer_options;
 use crate::project::Project;
 use flume::Sender;
 
@@ -100,28 +101,8 @@ impl RustAnalyzerLsp {
             change_notifier,
         };
 
-        let initialization_options: Option<serde_json::Value> = project
-            .rust_analyzer()
-            .and_then(|ra| serde_json::to_value(ra).ok())
-            .map(|ra_config| {
-                json!({
-                    "rust-analyzer": ra_config
-                })
-            });
-        let initialization_options2: Option<serde_json::Value> = project
-            .rust_analyzer()
-            .and_then(|ra| serde_json::to_value(ra).ok());
-        // let initialization_options: Option<serde_json::Value> = project
-        //     .rust_analyzer()
-        //     .and_then(|ra| serde_json::to_value(ra).ok());
-
-        let kk = project
-            .rust_analyzer
-            .as_ref()
-            .and_then(|config_ref| serde_json::to_value(config_ref).ok());
+        let initialization_options: Option<serde_json::Value> = get_rust_analyzer_options(project);
         tracing::info!("initialization_options: {initialization_options:?}");
-        tracing::info!("initialization_options2: {initialization_options2:?}");
-        tracing::info!("kk: {kk:?}");
 
         // Initialize.
         let init_ret = client
@@ -135,6 +116,10 @@ impl RustAnalyzerLsp {
                     name: "root".into(),
                 }]),
                 capabilities: ClientCapabilities {
+                    workspace: Some(lsp_types::WorkspaceClientCapabilities {
+                        workspace_folders: Some(true),
+                        ..lsp_types::WorkspaceClientCapabilities::default()
+                    }),
                     window: Some(WindowClientCapabilities {
                         work_done_progress: Some(true), // Required for indexing progress
                         ..WindowClientCapabilities::default()
@@ -161,8 +146,7 @@ impl RustAnalyzerLsp {
             .await
             // .unwrap();
             .context("LSP initialize failed")?;
-        tracing::debug!("Initialized: {init_ret:?}");
-        info!("LSP Initialized");
+        tracing::info!("InitializeResult: {init_ret:?}");
 
         // server.initialized(InitializedParams {}).unwrap();
         client
@@ -171,6 +155,8 @@ impl RustAnalyzerLsp {
             .await
             .initialized(InitializedParams {})
             .context("Sending Initialized notification failed")?;
+
+        tracing::info!("LSP Initialized");
 
         info!("Waiting for rust-analyzer indexing...");
         let rx = client.indexed_rx.lock().await.clone();
